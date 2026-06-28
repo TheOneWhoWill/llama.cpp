@@ -704,12 +704,21 @@ server_tokens process_mtmd_prompt(mtmd_context * mctx, const std::string & promp
     // process prompt
     std::string prompt_adj;
 
-    const char * marker = mtmd_get_marker(mctx);
+    const std::string marker = mtmd_get_marker(mctx);
+    const size_t marker_len  = marker.size();
 
-    // if the prompt does not contain the media marker, prepend one per file
-    // this mirrors the behavior in mtmd-cli.cpp
-    if (prompt.find(marker) == std::string::npos) {
-        for (size_t i = 0; i < files.size(); i++) {
+    // count existing media markers in the prompt
+    size_t n_markers = 0;
+    size_t pos = 0;
+    while ((pos = prompt.find(marker, pos)) != std::string::npos) {
+        n_markers++;
+        pos += marker_len;
+    }
+
+    // prepend missing markers so the count matches the number of files
+    // this mirrors the behavior in mtmd-cli.cpp but also handles partial matches
+    if (n_markers < files.size()) {
+        for (size_t i = 0; i < files.size() - n_markers; i++) {
             prompt_adj += marker;
         }
     }
