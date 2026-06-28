@@ -702,10 +702,23 @@ server_tokens process_mtmd_prompt(mtmd_context * mctx, const std::string & promp
         }
     }
     // process prompt
+    std::string prompt_adj;
+
+    const char * marker = mtmd_get_marker(mctx);
+
+    // if the prompt does not contain the media marker, prepend one per file
+    // this mirrors the behavior in mtmd-cli.cpp
+    if (prompt.find(marker) == std::string::npos) {
+        for (size_t i = 0; i < files.size(); i++) {
+            prompt_adj += marker;
+        }
+    }
+    prompt_adj += prompt;
+
     std::vector<server_tokens> inputs;
     // multimodal
     mtmd_input_text inp_txt = {
-        prompt.c_str(),
+        prompt_adj.c_str(),
         /* add_special */   true,
         /* parse_special */ true,
     };
