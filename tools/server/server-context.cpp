@@ -5242,6 +5242,32 @@ std::unique_ptr<server_res_generator> server_routes::handle_embeddings_impl(cons
         }
     }
 
+    // auto-insert media markers into prompt_string when multimodal data is present
+    // but the prompt_string lacks markers
+    if (ctx_server.mctx != nullptr && prompt.is_object() && prompt.contains("multimodal_data")) {
+        const std::string marker = get_media_marker();
+        const size_t n_files = prompt.at("multimodal_data").size();
+        std::string prompt_str = prompt.at("prompt_string").get<std::string>();
+
+        size_t n_markers = 0;
+        size_t pos = 0;
+        while ((pos = prompt_str.find(marker, pos)) != std::string::npos) {
+            n_markers++;
+            pos += marker.length();
+        }
+
+        if (n_markers < n_files) {
+            // the convention in the code base is to prepend the markers
+            std::string adj;
+            // insert missing markers at the beginning of prompt_string
+            for (size_t i = 0; i < n_files - n_markers; i++) {
+                adj += marker;
+            }
+            adj += prompt_str;
+            prompt["prompt_string"] = adj;
+        }
+    }
+
     auto tokenized_prompts = tokenize_input_prompts(ctx_server.vocab, ctx_server.mctx, prompt, true, true);
     for (const auto & tokens : tokenized_prompts) {
         // this check is necessary for models that do not add BOS token to the input
